@@ -1,9 +1,9 @@
-print("★★★このコード動いてる★★★")
-
 import requests
 import re
 import json
 import os
+
+print("★★★このコード動いてる★★★")
 
 SLACK_WEBHOOK = os.environ["SLACK_WEBHOOK"]
 
@@ -12,67 +12,88 @@ URLS = [
 ]
 
 def notify(message):
-    webhook_url = os.environ.get("SLACK_WEBHOOK")
+    print("送信するよ")
 
     res = requests.post(
-        webhook_url,
+        SLACK_WEBHOOK,
         json={"text": message}
     )
 
     print("Status:", res.status_code)
     print("Response:", res.text)
 
+
 def check_stock(url):
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(url, headers=headers)
     html = res.text
 
+    # =========================
+    # ① JSONチェック
+    # =========================
     matches = re.findall(
         r'<script type="application/ld\+json">(.*?)</script>',
         html,
         re.DOTALL
     )
 
-    if not matches:
-        print("JSON見つからない")
-        return None
+    print("JSON数:", len(matches))
 
     for m in matches:
         try:
             data = json.loads(m)
 
-            # パターン①
+            # dictパターン
             if isinstance(data, dict):
                 offers = data.get("offers")
                 if offers:
                     availability = offers.get("availability", "")
                     if "InStock" in availability:
+                        print("JSONで在庫あり検知")
                         return True
                     elif "OutOfStock" in availability:
                         return False
 
-            # パターン②（配列で来る場合）
+            # listパターン
             if isinstance(data, list):
                 for item in data:
                     offers = item.get("offers")
                     if offers:
                         availability = offers.get("availability", "")
                         if "InStock" in availability:
+                            print("JSONで在庫あり検知")
                             return True
                         elif "OutOfStock" in availability:
                             return False
 
-        except Exception as e:
+        except:
             continue
 
+    # =========================
+    # ② HTMLチェック（強い）
+    # =========================
+    if "カートに追加" in html or "Add to cart" in html:
+        print("HTMLで在庫あり検知")
+        return True
+
+    if "在庫なし" in html or "Out of stock" in html:
+        return False
+
+    # =========================
+    # ③ 不明
+    # =========================
+    print("判定できず")
     return None
 
+
 def main():
+    print("★★★main入った★★★")
+
     in_stock_urls = []
 
     for url in URLS:
         result = check_stock(url)
-        print(url, "→", result)  # デバッグ用
+        print(url, "→", result)
 
         if result:
             in_stock_urls.append(url)
@@ -82,6 +103,7 @@ def main():
         notify(message)
     else:
         print("在庫なし")
-        
+
+
 if __name__ == "__main__":
     main()
