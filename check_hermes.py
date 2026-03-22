@@ -22,7 +22,6 @@ def notify(message):
     print("Status:", res.status_code)
     print("Response:", res.text)
 
-
 def check_stock(url):
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(url, headers=headers)
@@ -43,7 +42,6 @@ def check_stock(url):
         try:
             data = json.loads(m)
 
-            # dictパターン
             if isinstance(data, dict):
                 offers = data.get("offers")
                 if offers:
@@ -54,7 +52,6 @@ def check_stock(url):
                     elif "OutOfStock" in availability:
                         return False
 
-            # listパターン
             if isinstance(data, list):
                 for item in data:
                     offers = item.get("offers")
@@ -70,14 +67,16 @@ def check_stock(url):
             continue
 
     # =========================
-    # ② HTMLチェック（強い）
+    # ② HTMLチェック（classベース）
     # =========================
-    if "カートに追加" in html or "Add to cart" in html:
-        print("HTMLで在庫あり検知")
+    if re.search(r'add[-_]to[-_]cart', html, re.IGNORECASE):
+        print("HTML(class)で在庫あり検知")
         return True
 
-    if "在庫なし" in html or "Out of stock" in html:
-        return False
+    # 404判定（ついでに強化）
+    if "ページが見つかりません" in html or "Page Not Found" in html:
+        print("404ページ")
+        return None
 
     # =========================
     # ③ 不明
