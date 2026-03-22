@@ -14,8 +14,6 @@ URLS = [
 def notify(message):
     webhook_url = os.environ.get("SLACK_WEBHOOK")
 
-    print("送信するよ")
-
     res = requests.post(
         webhook_url,
         json={"text": message}
@@ -29,16 +27,45 @@ def check_stock(url):
     res = requests.get(url, headers=headers)
     html = res.text
 
-    match = re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
+    matches = re.findall(
+        r'<script type="application/ld\+json">(.*?)</script>',
+        html,
+        re.DOTALL
+    )
 
-    if not match:
+    if not matches:
+        print("JSON見つからない")
         return None
 
-    data = json.loads(match.group(1))
-    offers = data.get("offers", {})
-    availability = offers.get("availability", "")
+    for m in matches:
+        try:
+            data = json.loads(m)
 
-    return "InStock" in availability
+            # パターン①
+            if isinstance(data, dict):
+                offers = data.get("offers")
+                if offers:
+                    availability = offers.get("availability", "")
+                    if "InStock" in availability:
+                        return True
+                    elif "OutOfStock" in availability:
+                        return False
+
+            # パターン②（配列で来る場合）
+            if isinstance(data, list):
+                for item in data:
+                    offers = item.get("offers")
+                    if offers:
+                        availability = offers.get("availability", "")
+                        if "InStock" in availability:
+                            return True
+                        elif "OutOfStock" in availability:
+                            return False
+
+        except Exception as e:
+            continue
+
+    return None
 
 def main():
     in_stock_urls = []
