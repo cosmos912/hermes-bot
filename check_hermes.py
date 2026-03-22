@@ -1,108 +1,51 @@
-import requests
-import re
-import json
 import os
-
-print("★★★このコード動いてる★★★")
+import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
 SLACK_WEBHOOK = os.environ["SLACK_WEBHOOK"]
 
 URLS = [
-    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%AA%E3%83%BC%E3%83%891923-%E3%83%9F%E3%83%8B-H084257CKAB/"
+    "https://www.hermes.com/jp/ja/product/バッグ-《ボリード1923》-ミニ-H084257CKAB/"
 ]
 
-def notify(message):
-    print("送信するよ")
+def notify(msg):
+    requests.post(SLACK_WEBHOOK, json={"text": msg})
 
-    res = requests.post(
-        SLACK_WEBHOOK,
-        json={"text": message}
-    )
+def check_stock(driver, url):
+    driver.get(url)
 
-    print("Status:", res.status_code)
-    print("Response:", res.text)
-
-def check_stock(url):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    res = requests.get(url, headers=headers)
-    html = res.text
-
-    # =========================
-    # ① JSONチェック
-    # =========================
-    matches = re.findall(
-        r'<script type="application/ld\+json">(.*?)</script>',
-        html,
-        re.DOTALL
-    )
-
-    print("JSON数:", len(matches))
-
-    for m in matches:
-        try:
-            data = json.loads(m)
-
-            if isinstance(data, dict):
-                offers = data.get("offers")
-                if offers:
-                    availability = offers.get("availability", "")
-                    if "InStock" in availability:
-                        print("JSONで在庫あり検知")
-                        return True
-                    elif "OutOfStock" in availability:
-                        return False
-
-            if isinstance(data, list):
-                for item in data:
-                    offers = item.get("offers")
-                    if offers:
-                        availability = offers.get("availability", "")
-                        if "InStock" in availability:
-                            print("JSONで在庫あり検知")
-                            return True
-                        elif "OutOfStock" in availability:
-                            return False
-
-        except:
-            continue
-
-    # =========================
-    # ② HTMLチェック（classベース）
-    # =========================
-    if re.search(r'add[-_]to[-_]cart', html, re.IGNORECASE):
-        print("HTML(class)で在庫あり検知")
+    try:
+        # カートボタン探す
+        driver.find_element(By.CSS_SELECTOR, "button[class*='add-to-cart']")
         return True
-
-    # 404判定（ついでに強化）
-    if "ページが見つかりません" in html or "Page Not Found" in html:
-        print("404ページ")
-        return None
-
-    # =========================
-    # ③ 不明
-    # =========================
-    print("判定できず")
-    return None
-
+    except:
+        return False
 
 def main():
-    print("★★★main入った★★★")
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-    in_stock_urls = []
+    driver = webdriver.Chrome(options=options)
+
+    in_stock = []
 
     for url in URLS:
-        result = check_stock(url)
-        print(url, "→", result)
+        result = check_stock(driver, url)
+        print(url, result)
 
         if result:
-            in_stock_urls.append(url)
+            in_stock.append(url)
 
-    if in_stock_urls:
-        message = "🔥在庫あり🔥\n" + "\n".join(in_stock_urls)
-        notify(message)
+    driver.quit()
+
+    if in_stock:
+        notify("🔥在庫あり🔥\n" + "\n".join(in_stock))
     else:
         print("在庫なし")
-
 
 if __name__ == "__main__":
     main()
