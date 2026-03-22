@@ -6,6 +6,7 @@ import os
 # Slack Webhook（GitHub Secretsから取得）
 SLACK_WEBHOOK = os.environ["SLACK_WEBHOOK"]
 
+
 # 監視URL
 URLS = [
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%B3%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC10/",
@@ -19,10 +20,17 @@ URLS = [
 ]
 
 def notify(message):
-    requests.post(
-        SLACK_WEBHOOK,
+    webhook_url = os.environ.get("SLACK_WEBHOOK")
+
+    print("Webhook:", webhook_url)  # ←追加
+
+    res = requests.post(
+        webhook_url,
         json={"text": message}
     )
+
+    print("Status:", res.status_code)  # ←追加
+    print("Response:", res.text)       # ←追加
 
 def check_stock(url):
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -45,6 +53,8 @@ def check_stock(url):
         return False
 
 def main():
+        notify("テスト通知")
+    
     in_stock_urls = []
 
     for url in URLS:
@@ -60,4 +70,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    notify("テスト通知")
