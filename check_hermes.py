@@ -17,10 +17,14 @@ def check_stock(driver, url):
     driver.get(url)
 
     try:
-        # カートボタン探す
-        driver.find_element(By.CSS_SELECTOR, "button[class*='add-to-cart']")
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "button[class*='add-to-cart']"))
+        )
+        print("在庫あり検知")
         return True
+
     except:
+        print("ボタン出現せず（在庫なし or 読み込み中）")
         return False
 
 def main():
