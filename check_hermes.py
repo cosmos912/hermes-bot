@@ -3,41 +3,37 @@ import re
 import json
 import os
 
-# Slack Webhook（GitHub Secretsから取得）
 SLACK_WEBHOOK = os.environ["SLACK_WEBHOOK"]
 
-
-# 監視URL
 URLS = [
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%B3%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC10/",
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%B3%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CCI2/",
-    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%B3%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC18/",
-    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%B3%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC3Y/",
+    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC18/",
+    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC3Y/",
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC37/",
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CC89/",
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%94%E3%82%BF%E3%83%B3%E3%83%BB%E3%83%AD%E3%83%83%E3%82%AF%E3%80%8B-18-H056289CCM4/",
-    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%9C%E3%83%AA%E3%83%BC%E3%83%891923%E3%80%8B-%E3%83%9F%E3%83%8B-%E3%80%8A%E7%A9%BA%E6%83%B3%E3%81%AE%E9%9E%8D%E3%80%8B-H084257CKAB/"
+    "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%AA%E3%83%BC%E3%83%891923-%E3%83%9F%E3%83%8B-H084257CKAB/"
 ]
 
 def notify(message):
     webhook_url = os.environ.get("SLACK_WEBHOOK")
 
-    print("Webhook:", webhook_url)  # ←追加
+    print("送信するよ")
 
     res = requests.post(
         webhook_url,
         json={"text": message}
     )
 
-    print("Status:", res.status_code)  # ←追加
-    print("Response:", res.text)       # ←追加
+    print("Status:", res.status_code)
+    print("Response:", res.text)
 
 def check_stock(url):
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(url, headers=headers)
     html = res.text
 
-    # ld+json抽出
     match = re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
 
     if not match:
@@ -47,14 +43,12 @@ def check_stock(url):
     offers = data.get("offers", {})
     availability = offers.get("availability", "")
 
-    if "InStock" in availability:
-        return True
-    else:
-        return False
+    return "InStock" in availability
 
 def main():
-        notify("テスト通知")
-    
+    # 強制テスト通知
+    notify("🔥テスト通知🔥")
+
     in_stock_urls = []
 
     for url in URLS:
