@@ -1,5 +1,11 @@
-import requests
 import os
+import requests
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 SLACK_WEBHOOK = os.environ["SLACK_WEBHOOK"]
 
@@ -7,37 +13,54 @@ URLS = [
     "https://www.hermes.com/jp/ja/product/%E3%83%90%E3%83%83%E3%82%B0-%E3%80%8A%E3%83%9C%E3%83%AA%E3%83%BC%E3%83%891923%E3%80%8B-%E3%83%9F%E3%83%8B-%E3%80%8A%E7%A9%BA%E6%83%B3%E3%81%AE%E9%9E%8D%E3%80%8B-H084257CKAB/"
 ]
 
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8",
-    "Referer": "https://www.hermes.com/jp/ja/"
-}
-
 def notify(msg):
     requests.post(SLACK_WEBHOOK, json={"text": msg})
 
-def check(url):
-    session = requests.Session()
-    res = session.get(url, headers=headers)
+def check_stock(driver, url):
+    driver.get(url)
 
-    print("status:", res.status_code)
+    try:
+        # ページ完全ロード待ち
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
 
-    return res.status_code == 200
+        # さらに少し待つ（ここがミソ）
+        time.sleep(3)
+
+        # カートボタン検出
+        driver.find_element(By.CSS_SELECTOR, "button[class*='add-to-cart']")
+
+        print("在庫あり")
+        return True
+
+    except Exception as e:
+        print("在庫なし or 未検出", e)
+        return False
 
 def main():
-    alive = []
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(options=options)
+
+    in_stock = []
 
     for url in URLS:
-        ok = check(url)
-        print(url, ok)
+        result = check_stock(driver, url)
+        print(url, result)
 
-        if ok:
-            alive.append(url)
+        if result:
+            in_stock.append(url)
 
-    if alive:
-        notify("🟢ページ復活\n" + "\n".join(alive))
+    driver.quit()
+
+    if in_stock:
+        notify("🔥在庫あり🔥\n" + "\n".join(in_stock))
     else:
-        print("全部404")
+        print("在庫なし")
 
 if __name__ == "__main__":
     main()
