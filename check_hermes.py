@@ -1,3 +1,5 @@
+print("★★★このコード動いてる★★★")
+
 import requests
 import re
 import json
@@ -46,7 +48,7 @@ def check_stock(url):
     return "InStock" in availability
 
 def main():
-    # 強制テスト通知
+    print("★★★main入った★★★")
     notify("🔥テスト通知🔥")
 
     in_stock_urls = []
